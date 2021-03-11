@@ -18,15 +18,15 @@
     | NAME of string | NAT of int
     | EOF
 
-%nonterm Prog of (* WIP *)
-    | Decl of (* WIP *)
-    | Expr of (* WIP *)
-    | AtomExpr of (* WIP *)
+%nonterm Prog of expr
+    | Decl of expr
+    | Expr of expr
+    | AtomExpr of expr
     | AppExpr of (* WIP *)
-    | Const of (* WIP *)
-    | Comps of (* WIP *)
-    | MatchExpr of (* WIP *)
-    | CondExpr of (* WIP *)
+    | Const of expr
+    | Comps of expr
+    | MatchExpr of (expr option * expr) list
+    | CondExpr of expr option
     | Args of (* WIP *)
     | Params of (* WIP *)
     | TypedVar of (* WIP *)
@@ -51,41 +51,58 @@
 %%
 
 Prog : Expr (Expr)
-    | VAR NAME EQ Exper SEMIC Prog (LET(NAME, Expr, Prog))
-(* WIP *)
+    | Decl (Decl)
 
-Decl : (* WIP *)
-
-Expr : (* WIP *)
+Decl : VAR NAME EQ Expr SEMIC Prog (Let(NAME, Expr, Prog))
+    | (* definir caso de função não anônima *)
+    | (* definir caso de função recursiva *)
 
 Expr : AtomExpr (AtomExpr)
+    | AppExpr (AppExpr)
+    | IF Expr THEN Expr ELSE Expr (If(Expr1, Expr2, Expr3))
+    | MATCH Expr WITH MatchExpr (Match(Expr, MatchExpr))
+    | NOT Expr (Prim1("!", Expr1))
+    | MINUS Expr (Prim1("-", Expr1))
+    | HD Expr (Prim1("hd", Expr1))
+    | TL Expr (Prim1("tl", Expr1))
+    | ISE Expr (Prim1("ise", Expr1))
+    | PRINT Expr (Prim1("print", Expr1))
+    | Expr AND Expr (Prim2("&&", Expr1, Expr2))
     | Expr PLUS Expr (Prim2("+", Expr1, Expr2))
     | Expr MINUS Expr (Prim2("-", Expr1, Expr2))
     | Expr MULT Expr (Prim2("*", Expr1, Expr2))
     | Expr DIV Expr (Prim2("/", Expr1, Expr2))
     | Expr EQ Expr (Prim2("=", Expr1, Expr2))
     | Expr DIF Expr (Prim2("!=", Expr1, Expr2))
-    | Expr AND Expr (Prim2("&&", Expr1, Expr2))
     | Expr LESS Expr (Prim2("<", Expr1, Expr2))
     | Expr LESSEQ Expr (Prim2("<=", Expr1, Expr2))
     | Expr CONCAT Expr (Prim2("::", Expr1, Expr2))
-    | Expr NOT Expr (Prim1("-", Expr1))
-    | Expr HD Expr (Prim1("hd", Expr1))
-    | Expr TL Expr (Prim1("tl", Expr1))
-    | Expr ISE Expr (Prim1("ise", Expr1))
-    | Expr PRINT Expr (Prim1("print", Expr1))
+    | Expr SEMIC Expr (Prim2(";", Expr1, Expr2))
+    | Expr LBRAC NAT RBRAC (Item(NAT, Expr))
 
-(* WIP *)
+AtomExpr : Const (Const)
+    | NAME (Var NAME)
+    | LCBR Prog RCBR (Prog)
+    | LPAR Expr RPAR (Expr)
+    | LPAR Comps RPAR (Comps)
+    |  (* definir caso de função anônima *)
 
 AppExpr : (* WIP *)
 
-Const : (* WIP *)
+Const : TRUE (ConB true)
+    | FALSE (ConB false)
+    | NAT (ConI NAT)
+    | LPAR RPAR (List [])
+    | LPAR Type LBRAC RBRAC RPAR (ESeq(Type))
 
-Comps : (* WIP *)
+Comps : Expr COMMA Expr (List Expr1::Expr2::[])
+    | Expr COMMA Comps (Expr::Comps)
 
-MatchExpr : (* WIP *)
+MatchExpr : END ([])
+    | PIPE CondExpr ARROW Expr MatchExpr ((CondExpr, Expr)::MatchExpr)
 
-CondExpr : (* WIP *)
+CondExpr : UNDSCR (NONE)
+    | Expr (SOME(Expr))
 
 Args : (* WIP *)
 
