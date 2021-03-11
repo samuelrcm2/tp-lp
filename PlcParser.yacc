@@ -22,17 +22,17 @@
     | Decl of expr
     | Expr of expr
     | AtomExpr of expr
-    | AppExpr of (* WIP *)
+    | AppExpr of expr
     | Const of expr
-    | Comps of expr
+    | Comps of expr list
     | MatchExpr of (expr option * expr) list
     | CondExpr of expr option
-    | Args of (* WIP *)
-    | Params of (* WIP *)
-    | TypedVar of (* WIP *)
-    | Type of (* WIP *)
-    | AtomType of (* WIP *)
-    | Types of (* WIP *) 
+    | Args of (plcType * string) list
+    | Params of (plcType * string) list
+    | TypedVar of plcType * string
+    | Type of plcType
+    | AtomType of plcType
+    | Types of plcType list
 
 %right SEMIC ARROW 
 %nonassoc IF
@@ -54,8 +54,8 @@ Prog : Expr (Expr)
     | Decl (Decl)
 
 Decl : VAR NAME EQ Expr SEMIC Prog (Let(NAME, Expr, Prog))
-    | (* definir caso de função não anônima *)
-    | (* definir caso de função recursiva *)
+    | FUN NAME Args EQ Expr SEMIC Prog (Let(NAME, makeAnon(Args, Expr), Prog))
+    | FUN REC NAME Args COL Type EQ Expr SEMIC Prog (makeFun(NAME, Args, Type, Expr, Prog))
 
 Expr : AtomExpr (AtomExpr)
     | AppExpr (AppExpr)
@@ -84,10 +84,11 @@ AtomExpr : Const (Const)
     | NAME (Var NAME)
     | LCBR Prog RCBR (Prog)
     | LPAR Expr RPAR (Expr)
-    | LPAR Comps RPAR (Comps)
-    |  (* definir caso de função anônima *)
+    | LPAR Comps RPAR (List(Comps))
+    | ANONFUN Args DBLARROW Expr END (makeAnon(Args, Expr))
 
-AppExpr : (* WIP *)
+AppExpr : AtomExpr AtomExpr (Call(AtomExpr1, AtomExpr2))
+    | AppExpr AtomExpr (Call(AppExpr, AtomExpr))
 
 Const : TRUE (ConB true)
     | FALSE (ConB false)
@@ -95,7 +96,7 @@ Const : TRUE (ConB true)
     | LPAR RPAR (List [])
     | LPAR Type LBRAC RBRAC RPAR (ESeq(Type))
 
-Comps : Expr COMMA Expr (List Expr1::Expr2::[])
+Comps : Expr COMMA Expr (Expr1::Expr2::[])
     | Expr COMMA Comps (Expr::Comps)
 
 MatchExpr : END ([])
@@ -104,14 +105,23 @@ MatchExpr : END ([])
 CondExpr : UNDSCR (NONE)
     | Expr (SOME(Expr))
 
-Args : (* WIP *)
+Args : LPAR RPAR ([])
+    | LPAR Params RPAR (Params)
 
-Params : (* WIP *)
+Params : TypedVar (TypedVar::[])
+    | TypedVar COMMA Params (TypedVar::Params)
 
-TypedVar : (* WIP *)
+TypedVar : Type NAME (Type, NAME)
 
-Type : (* WIP *)
+Type : AtomType (AtomType)
+    | LPAR Types RPAR (ListT(Types))
+    | LBRAC Type RBRAC (SeqT(Type))
+    | Type ARROW Type (FunT(Type1, Type2))
 
-AtomType : (* WIP *)
+AtomType : TNIL (ListT [])
+    | TBOOL (BoolT)
+    | TINT (IntT)
+    | LPAR Type RPAR (Type)
 
-Types : (* WIP *) 
+Types : Type COMMA Type (Type1::Type2::[])
+    | Type COMMA Types (Type::Types)
