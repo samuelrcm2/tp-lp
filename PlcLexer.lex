@@ -40,12 +40,13 @@ fun keyWord (s, lpos, rpos) =
         | "then" => THEN (lpos, rpos)
         | "tl" => TL (lpos, rpos)
         | "true" => TRUE (lpos, rpos)
-        | "with" => REC (lpos, rpos)
+        | "with" => WITH (lpos, rpos)
+        | "_" => UNDSCR (lpos, rpos)
         | _   => NAME (s, lpos, rpos)
 
 fun strToInt s =
     case Int.fromString s of
-        SOME i =: i
+        SOME i => i
     |   NONE => raise Fail ("Could not convert string '" ^ s ^ "' to integer")
 
 (* Define what to do when the end of the file is reached. *)
@@ -59,31 +60,40 @@ alpha=[A-Za-z];
 digit=[0-9];
 whitespace=[\ \t];
 identifier=[a-zA-Z_][a-zA-Z_0-9]*;
+%s COMMENT;
+startcomment=\(\*;
+endcomment=\*\);
 %%
 
 \n => (lineNumber := !lineNumber + 1; lex());
-{whitespace}+ => (lex());
-{digit}+ => (TINT(strToInt(yytext), yypos, yypos));
-{identifier} => (keyWord(yytext, yypos, yypos));
-"+" => (PLUS(yypos, yypos))
-"-" => (MINUS(yypos, yypos))
-"*" => (MULT(yypos, yypos))
-"/" => (DIV(yypos, yypos))
-"(" => (LPAR(yypos, yypos))
-")" => (RPAR(yypos, yypos))
-"=" => (EQ(yypos, yypos))
-";" => (SEMIC(yypos, yypos))
-"&&" => (AND(yypos, yypos))
-"!=" => (DIF(yypos, yypos))
-"::" => (CONCAT(yypos, yypos))
-"<" => (LESS(yypos, yypos))
-"<=" => (LESSEQ(yypos, yypos))
-"{" => (LCBR(yypos, yypos))
-"}" => (RCBR(yypos, yypos))
-"[" => (LBRAC(yypos, yypos))
-"]" => (RBRAC(yypos, yypos))
-"," => (COMMA(yypos, yypos))
-"!" => (NOT(yypos, yypos))
-"|" => (PIPE(yypos, yypos))
-, => (error("\n***Lexer errorbad character ***\n");
+<INITIAL>{whitespace}+ => (lex());
+<INITIAL>{digit}+ => (NAT(strToInt(yytext), yypos, yypos));
+<INITIAL>{identifier} => (keyWord(yytext, yypos, yypos));
+<INITIAL>"+" => (PLUS(yypos, yypos));
+<INITIAL>"-" => (MINUS(yypos, yypos));
+<INITIAL>"*" => (MULT(yypos, yypos));
+<INITIAL>"/" => (DIV(yypos, yypos));
+<INITIAL>"(" => (LPAR(yypos, yypos));
+<INITIAL>")" => (RPAR(yypos, yypos));
+<INITIAL>"=" => (EQ(yypos, yypos));
+<INITIAL>";" => (SEMIC(yypos, yypos));
+<INITIAL>"&&" => (AND(yypos, yypos));
+<INITIAL>"!=" => (DIF(yypos, yypos));
+<INITIAL>":" => (COL(yypos, yypos));
+<INITIAL>"::" => (CONCAT(yypos, yypos));
+<INITIAL>"<" => (LESS(yypos, yypos));
+<INITIAL>"<=" => (LESSEQ(yypos, yypos));
+<INITIAL>"{" => (LCBR(yypos, yypos));
+<INITIAL>"}" => (RCBR(yypos, yypos));
+<INITIAL>"[" => (LBRAC(yypos, yypos));
+<INITIAL>"]" => (RBRAC(yypos, yypos));
+<INITIAL>"," => (COMMA(yypos, yypos));
+<INITIAL>"!" => (NOT(yypos, yypos));
+<INITIAL>"|" => (PIPE(yypos, yypos));
+<INITIAL>"->" => (ARROW(yypos, yypos));
+<INITIAL>"=>" => (DBLARROW(yypos, yypos));
+<INITIAL>{startcomment} => (YYBEGIN COMMENT; lex());
+<COMMENT>{endcomment} => (YYBEGIN INITIAL; lex());
+<COMMENT>. => (lex());
+<INITIAL>. => (error("\n***Lexer errorbad character ***\n");
     raise Fail("Lexer error: bad character " ^yytext));
