@@ -50,13 +50,32 @@
 
 %%
 
-Prog : (* WIP *)
+Prog : Expr (Expr)
+    | VAR NAME EQ Exper SEMIC Prog (LET(NAME, Expr, Prog))
+(* WIP *)
 
 Decl : (* WIP *)
 
 Expr : (* WIP *)
 
-AtomExpr : (* WIP *)
+Expr : AtomExpr (AtomExpr)
+    | Expr PLUS Expr (Prim2("+", Expr1, Expr2))
+    | Expr MINUS Expr (Prim2("-", Expr1, Expr2))
+    | Expr MULT Expr (Prim2("*", Expr1, Expr2))
+    | Expr DIV Expr (Prim2("/", Expr1, Expr2))
+    | Expr EQ Expr (Prim2("=", Expr1, Expr2))
+    | Expr DIF Expr (Prim2("!=", Expr1, Expr2))
+    | Expr AND Expr (Prim2("&&", Expr1, Expr2))
+    | Expr LESS Expr (Prim2("<", Expr1, Expr2))
+    | Expr LESSEQ Expr (Prim2("<=", Expr1, Expr2))
+    | Expr CONCAT Expr (Prim2("::", Expr1, Expr2))
+    | Expr NOT Expr (Prim1("-", Expr1))
+    | Expr HD Expr (Prim1("hd", Expr1))
+    | Expr TL Expr (Prim1("tl", Expr1))
+    | Expr ISE Expr (Prim1("ise", Expr1))
+    | Expr PRINT Expr (Prim1("print", Expr1))
+
+(* WIP *)
 
 AppExpr : (* WIP *)
 
