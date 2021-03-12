@@ -37,6 +37,3 @@ fun makeAnon (xs:(plcType * string) list, e:expr):expr =
 					Anon(t,"$list",e')
 				end
 			end;
-
-
-				
