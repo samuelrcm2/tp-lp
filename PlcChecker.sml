@@ -103,12 +103,12 @@ fun teval(e: expr) (env: (string *plcType )list): plcType =
         end
     | Item (i, e) => teval e env
     | Anon (plcType, s, e) => if ((teval e env) = plcType ) then teval e env else raise WrongRetType
-    | List e => teval (hd e) env;
-    (* let
-        val test = teval e env
-        in
-            ListT
-        end *)
+    | List e => case e of
+        (hd::tl) => teval hd env 
+        | _ => raise OpNonList
+    ;
+
+
 
 fun checkMatch(next::rest: (expr option * expr) list)(env: (string *plcType )list): int = 
     case next of
