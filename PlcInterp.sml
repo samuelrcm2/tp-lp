@@ -13,7 +13,8 @@ fun eval (e:expr) (st:plcType env) : plcVal =
     | ESeq(t) => SeqV []
     | Var(name) => eval (lookup st name) st
     | Let(name, value, exp) => eval exp ((name, (eval value st))::st)
-(* | Letrec of string * plcType * string * plcType * expr * expr *)
+    | Letrec(funcname, vartype, varname, functype, funcbody, prog) =>
+      eval prog ((Clos (funcname, varname, funcbody, st))::st)
     | Prim1(op exp) => 
       let
         val value = eval exp st
@@ -108,7 +109,20 @@ fun eval (e:expr) (st:plcType env) : plcVal =
         | _ => raise Impossible
       end
 (* | Match of expr * (expr option * expr) list *)
-(* | Call of expr * expr *)
+    | Call(funcname, valexp) =>
+      let
+        val funcclosure = eval funcname st;
+      in
+        case funcclosure of 
+          Clos(funcname, varname, funcbody, funcst) =>
+            let
+              val value = eval valexp st;
+              val recst = (varname, value)::(funcname, funcclosure)::funcst
+            in
+              eval funcbody recst
+            end
+        | _ => raise NotAFunc
+      end
     | List(items) =>
       let
         fun evalList (items:expr list) (st:plcType env) : plcVal list =
@@ -128,4 +142,4 @@ fun eval (e:expr) (st:plcType env) : plcVal =
           ListV(items) => findIndex 1 items
         | _ => raise Impossible
       end
-(* | Anon of plcType * string * expr; *)
+    | Anon(vartype, varname, funcbody) => Clos("", varname, funcbody, st);
