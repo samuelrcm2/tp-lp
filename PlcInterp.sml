@@ -13,7 +13,7 @@ fun eval (e:expr) (st:plcType env) : plcVal =
     | ESeq(t) => SeqV []
     | Var(name) => eval (lookup st name) st
     | Let(name, value, exp) => eval exp ((name, (eval value st))::st)
-# | Letrec of string * plcType * string * plcType * expr * expr
+(* | Letrec of string * plcType * string * plcType * expr * expr *)
     | Prim1(op exp) => 
       let
         val value = eval exp st
@@ -29,18 +29,18 @@ fun eval (e:expr) (st:plcType env) : plcVal =
               | _ => raise Impossible)
         | ("hd") => 
           (case value of
-             xs::t => xs
-            | [] => raise HDEmptySeq
+             SeqV (xs::t) => xs
+            | SeqV ([]) => raise HDEmptySeq
             | _ => raise Impossible)
         | ("tl") => 
           (case value of
-             xs::t => t
-            | [] => raise TLEmptySeq
+             SeqV (xs::t) => t
+            | SeqV ([]) => raise TLEmptySeq
             | _ => raise Impossible)
         | ("ise") =>
           (case value of
-            [] => BoolV true
-            | xs::t => BoolV false
+            SeqV ([]) => BoolV true
+            | SeqV (xs::t) => BoolV false
             | _ => raise Impossible)
         | ("print") => print ((val2string value) ^ "\n")
         | _ => raise Impossible
@@ -107,8 +107,25 @@ fun eval (e:expr) (st:plcType env) : plcVal =
           (BoolV result) => if result then (eval thenexp st) else (eval elsexp st)
         | _ => raise Impossible
       end
-# | Match of expr * (expr option * expr) list
-# | Call of expr * expr
-# | List of expr list
-# | Item of int * expr
-# | Anon of plcType * string * expr;
+(* | Match of expr * (expr option * expr) list *)
+(* | Call of expr * expr *)
+    | List(items) =>
+      let
+        fun evalList (items:expr list) (st:plcType env) : plcVal list =
+          case items of
+            [] => []
+          | xs::t => (eval xs st)::(evalList t st)
+      in
+        ListV (evalList items st)
+      end
+    | Item(index, itemexpr) =>
+      let
+        val itemeval = eval itemexpr st;
+        fun findIndex (curr: int) (xs::t : plcVal list) : plcVal =
+          if (curr = index) then xs else findIndex (curr + 1) t
+      in
+        case itemeval of
+          ListV(items) => findIndex 1 items
+        | _ => raise Impossible
+      end
+(* | Anon of plcType * string * expr; *)
