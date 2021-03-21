@@ -1,5 +1,4 @@
 (* PlcChecker *)
-use "Environ.sml";
 exception EmptySeq
 exception UnknownType
 exception NotEqTypes
@@ -14,7 +13,7 @@ exception NotFunc
 exception ListOutOfRange
 exception OpNonList
 
-fun teval(e, env: plcType): plcType =
+fun teval(e: expr) (env: plcType): plcType =
     case e of
      ConI => IntT
     | ConB => BoolT
@@ -52,12 +51,58 @@ fun teval(e, env: plcType): plcType =
                                         raise DiffBrTypes
                             else 
                                 raise IfCondNotBool
-    | Match (e, list) =>
+    | Match (e, list) => case list of 
+        (a::xs) => let
+                    val verifyList = checkMatch(list, env)
+                in
+                    case a of
+                    (SOME c1, e1) => teval(e1, env)
+                    | (NONE, e1) => teval(e1, env)
+                    | _ => raise UnknownType
+                end
+        | [] => raise ListOutOfRange
+        | _ => raise UnknownType
     | Call (e1, e2) => if (getType(e1) = Let) then teval(e1, env) else raise NotFunc
     | List e => ListT(e)
     | Item (i, e) => teval(e, env)
     | Anon (plcType, s, e) => if (getPlcType(teval(e, env)) = getPlcType(plcType) ) then teval(e, env) else raise WrongRetType
     | _ => raise UnknownType;
+
+fun checkMatch(l: (expr option * expr) list)(env: plcType): int = 
+    case l of
+        (SOME c, e)::xs => let
+            val nextvalue = hd xs
+        in
+            case nextvalue of
+            (SOME c1, e1) => if (teval(c, env) = teval(c1, env)) 
+                             then
+                                if (teval(e, env) = teval(e1, env))
+                                then
+                                    checkMatch(xs, env)
+                                else
+                                    raise MatchResTypeDiff
+                            else
+                                raise MatchCondTypesDiff
+            | (NONE, e1) => if (teval(e, env) = teval(e1, env)) 
+                             then       
+                                checkMatch(xs, env)
+                            else
+                                raise MatchResTypeDiff
+            | _ => raise UnknownType
+            end
+        | (NONE, e)::xs => let
+            val nextvalue = hd xs
+        in case nextvalue of
+            (SOME c1, e1) => if (teval(e, env) = teval(e1, env))
+                                then
+                                    checkMatch(xs, env)
+                                else
+                                    raise MatchResTypeDiff
+            | (NONE, e1) => raise WrongRetType;
+            | _ => raise UnknownType
+            end
+        | [] => 0
+        | _ => raise UnknownType;
 
 fun getType(e: expr) =
     case e of
