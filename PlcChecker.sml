@@ -1,5 +1,3 @@
-use "Environ.sml";
-use "Absyn.sml";
 (* PlcChecker *)
 exception EmptySeq
 exception UnknownType
@@ -15,7 +13,7 @@ exception NotFunc
 exception ListOutOfRange
 exception OpNonList
 
-fun teval(e: expr) (env: (string *plcType )list): plcType =
+fun teval(e: expr) (env: plcType env) : plcType =
     case e of
      ConI i => IntT 
     | ConB b => BoolT
@@ -23,7 +21,11 @@ fun teval(e: expr) (env: (string *plcType )list): plcType =
     | Var s => lookup env s
     | Let (s, e1, e2) =>  if((teval e1 env) = (teval e2 env)) then teval e2 env else raise WrongRetType
     | Letrec (s1, pt1, s2, pt2, e1, e2) =>
-    if ((teval e1 env) = pt2) then teval e1 env else raise WrongRetType
+        let
+            val funcenv = (s2, pt1)::env
+        in
+            if ((teval e1 funcenv) = pt2) then teval e1 funcenv else raise WrongRetType
+        end
     | Prim1 (s, e) => let
                 val ee = teval e env
             in
@@ -93,79 +95,57 @@ fun teval(e: expr) (env: (string *plcType )list): plcType =
         in
             case llist of 
             (a::xs) => let
-                        val verifyList = checkMatch list env
-                    in
-                        case a of
-                        (SOME c1, e1) => teval e1 env
-                        | (NONE, e1) => teval e1 env
-                    end
-            | _ => raise UnknownType
+                    fun checkMatch(next::rest: (expr option * expr) list)(env: (string *plcType )list): int = 
+                        case next of
+                            (SOME(c), e) =>
+                            let
+                                val nextvalue = hd rest
+                            in
+                                case nextvalue of
+                                (SOME(c1), e1) => if ((teval c env) = (teval c1 env)) 
+                                                then
+                                                    if ((teval e env) = (teval e1 env))
+                                                    then
+                                                        checkMatch rest env
+                                                    else
+                                                        raise MatchResTypeDiff
+                                                else
+                                                    raise MatchCondTypesDiff
+                                | (NONE, e1) => if ((teval e env) = (teval e1 env)) 
+                                                then       
+                                                    checkMatch rest env
+                                                else
+                                                    raise MatchResTypeDiff
+                            end
+                            | (NONE, e) =>
+                                let
+                                    val nextvalue = hd rest
+                                in case nextvalue of
+                                (SOME (c1), e1) => if ((teval e env) = (teval e1 env))
+                                                then
+                                                    checkMatch rest env
+                                                else
+                                                    raise MatchResTypeDiff
+                                | (NONE, e1) => raise WrongRetType
+                                end
+                    val verifyList = checkMatch list env
+                in
+                    case a of
+                    (SOME c1, e1) => teval e1 env
+                    | (NONE, e1) => teval e1 env
+                end
+            | _ => raise NoMatchResults
         end
-    | Item (i, e) => teval e env
+    | Item (i, e) =>
+        let
+            val evaltype = teval e env
+        in
+            case evaltype of
+                ListT(types) => evaltype
+                | _ => raise OpNonList
+        end
     | Anon (plcType, s, e) => if ((teval e env) = plcType ) then teval e env else raise WrongRetType
     | List e => case e of
         (hd::tl) => teval hd env 
         | _ => raise OpNonList
     ;
-
-
-
-fun checkMatch(next::rest: (expr option * expr) list)(env: (string *plcType )list): int = 
-    case next of
-        (SOME(c), e) =>
-        let
-            val nextvalue = hd rest
-        in
-            case nextvalue of
-            (SOME(c1), e1) => if ((teval c env) = (teval c1 env)) 
-                            then
-                                if ((teval e env) = (teval e1 env))
-                                then
-                                    checkMatch rest env
-                                else
-                                    raise MatchResTypeDiff
-                            else
-                                raise MatchCondTypesDiff
-            | (NONE, e1) => if ((teval e env) = (teval e1 env)) 
-                            then       
-                                checkMatch rest env
-                            else
-                                raise MatchResTypeDiff
-        end
-        | (NONE, e) =>
-            let
-                val nextvalue = hd rest
-            in case nextvalue of
-            (SOME (c1), e1) => if ((teval e env) = (teval e1 env))
-                            then
-                                checkMatch rest env
-                            else
-                                raise MatchResTypeDiff
-            | (NONE, e1) => raise WrongRetType
-            end
-    ;
-
-fun getType(e: expr) =
-    case e of
-    ConI i => ConI i
-    | ConB b => ConB b
-    | ESeq plcType => ESeq plcType
-    | Var s => Var s
-    | Let (s, e1, e2) => Let (s, e1, e2)
-    | Letrec (s1, plc1, s2, pcl2, e1, e2) => Letrec (s1, plc1, s2, pcl2, e1, e2)
-    | Prim1 (s, e1) => Prim1 (s, e1)
-    | Prim2 (s, e1, e2) => Prim2 (s, e1, e2)
-    | If(e1, e2, e3) => If(e1, e2, e3)
-    | Match(e, l) => Match(e, l)
-    | Call (e1, e2) => Call (e1, e2)
-    | List (l) => List (l)
-    | Item (i, e) => Item (i, e)
-    | Anon (plc, s, i) => Anon (plc, s, i);
-
-fun getPlcType(e: plcType):plcType =
-    case e of 
-    IntT => IntT
-    | BoolT => BoolT
-    | FunT (plc1, plc2)  => FunT (plc1, plc2) 
-    | ListT (l) => ListT (l)
-    | SeqT plc  => SeqT plc;
