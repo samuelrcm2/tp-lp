@@ -36,10 +36,14 @@
 
 %right SEMIC ARROW 
 %nonassoc IF
-%left ELSE AND EQ DIF LESS LESSEQ
+%left ELSE
+%left AND
+%left EQ DIF
+%left LESS LESSEQ
 %right CONCAT 
-%left PLUS MINUS MULT DIV
-%nonassoc NOT HD TL ISE PRINT 
+%left PLUS MINUS
+%left MULT DIV
+%nonassoc NOT HD TL ISE PRINT NAME
 %left LBRAC
 
 %eop EOF
