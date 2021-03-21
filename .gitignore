@@ -1,2 +1,3 @@
+.vscode
 PlcParser.yacc.*
 PlcLexer.lex.*
