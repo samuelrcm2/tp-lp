@@ -136,7 +136,7 @@ fun eval (e:expr) (st:plcType env) : plcVal =
       let
         val itemeval = eval itemexpr st;
         fun findIndex (curr: int) (xs::t : plcVal list) : plcVal =
-          if (curr = index) then xs else findIndex (curr + 1) t
+          if (curr = index) then xs else (if (curr > index orelse null t) then raise Impossible else findIndex (curr + 1) t)
       in
         case itemeval of
           ListV(items) => findIndex 1 items
