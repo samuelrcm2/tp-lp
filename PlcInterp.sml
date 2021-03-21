@@ -108,7 +108,22 @@ fun eval (e:expr) (st:plcVal env) : plcVal =
           (BoolV result) => if result then (eval thenexp st) else (eval elsexp st)
         | _ => raise Impossible
       end
-    | Match(what, options) => raise Impossible
+    | Match(exp, options) =>
+      let
+        val what = eval exp st;
+        fun tryMatch (next::rest) : plcVal =
+            (case next of
+              (SOME(condexp), option) =>
+                let
+                  val cond = eval condexp st
+                in
+                  if what = cond then eval option st else tryMatch rest
+                end
+            | (NONE, option) => eval option st)
+          | tryMatch [] = raise ValueNotFoundInMatch;
+      in
+        tryMatch options
+      end
     | Call(funcname, valexp) =>
       let
         val funcclosure = eval funcname st;
